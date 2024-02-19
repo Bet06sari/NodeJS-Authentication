@@ -1,21 +1,10 @@
-import { Column, Entity, PrimaryGeneratedColumn } from "typeorm";
+import mongoose from "mongoose";
 
-@Entity()
-export class User {
-    @PrimaryGeneratedColumn()
-    id!: number;
+const UserSchema = new mongoose.Schema({
+    first_name: String,
+    last_name: String,
+    email: { type: String, unique: true },
+    password: String
+});
 
-    @Column()
-    first_name!: string;
-
-    @Column()
-    last_name!: string;
-
-    @Column({
-        unique: true
-    })
-    email!: string;
-
-    @Column()
-    password!: string;
-}
+export const User = mongoose.model("User", UserSchema);

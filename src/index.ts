@@ -1,21 +1,26 @@
 import dotenv from 'dotenv';
-import express, { Request, Response } from "express";
-import { createConnection } from 'typeorm';
+import express from "express";
+import { routes } from './routes';
+import mongoose from 'mongoose';
 
 dotenv.config();
 
 const app = express();
 app.use(express.json());
 
-createConnection().then(() => {
-  console.log("database connection successful");
+const MONGODB_URI: string | undefined = process.env.MONGODB_URI;
 
-  app.get("/", (req: Request, res: Response) => {
-    res.send("Hello World!");
-  });
+mongoose.connect(MONGODB_URI!, {
+}).then(() => {
+  console.log("MongoDB'ye bağlantı başarılı");
+}).catch((err) => {
+  console.error("MongoDB'ye bağlanırken hata oluştu:", err);
+  process.exit(1);
+});
+
+routes(app);
   
   app.listen(3000, () => {
     console.log("Example app listening on port 3000!");
   });
-});
 
