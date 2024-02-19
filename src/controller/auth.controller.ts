@@ -1,7 +1,7 @@
 import { Request, Response } from "express";
 import bcryptjs from "bcryptjs";
 import { User } from "../entity/user.entity";
-import {sign} from 'jsonwebtoken'
+import {sign, verify} from 'jsonwebtoken'
 
 
 export const Register = async (req: Request, res: Response) => {
@@ -77,3 +77,34 @@ export const Login = async  (req: Request, res: Response) => {
     res.status(500).json({ error: "Sunucu hatası" });
   }
 };
+
+export const AuthenticatedUser = async  (req: Request, res: Response) => {
+  try {
+    const cookie = req.cookies['access_token'];
+    const payload: any = verify(cookie, process.env.ACCESS_SECRET || '');
+
+    if(!payload) {
+      return res.status(401).json({
+        message: 'Unauthorized'
+      });
+    }
+
+    const user = await User.findOne({ _id: payload.id });
+    console.log(user);
+
+    if(!user) {
+      return res.status(401).json({
+        message: 'Unauthorized'
+      });
+    }
+
+    const { password, ...data } = user.toObject();  //mongoose modelini js nesnesine dönüştürme
+    res.send(data);
+
+
+  } catch(e) {
+    return res.status(401).json({
+      message: 'Unauthorized'
+    });
+  }
+}
