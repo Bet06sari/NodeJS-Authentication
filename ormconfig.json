@@ -1,11 +1,12 @@
 {
     "type": "mongodb",
-    "url": "mongodb+srv://can123456789:can123456789@cluster0.npksef3.mongodb.net/AuthenticationDemo",
+    "url": "mongodb+srv://can123456789:can123456789@cluster0.npksef3.mongodb.net/",
+    "database": "AuthenticationDemo",
     "useNewUrlParser": true,
     "entities": [
       "src/entity/*.ts"
     ],
-    "synchronize": false,
+    "synchronize": true,
     "logging": false
   }
   
