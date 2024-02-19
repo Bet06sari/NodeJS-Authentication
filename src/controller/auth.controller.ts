@@ -1,6 +1,7 @@
 import { Request, Response } from "express";
 import bcryptjs from "bcryptjs";
 import { User } from "../entity/user.entity";
+import {sign} from 'jsonwebtoken'
 
 
 export const Register = async (req: Request, res: Response) => {
@@ -49,7 +50,27 @@ export const Login = async  (req: Request, res: Response) => {
       });
     }
 
-    res.send(user);
+    const accessToken = sign({
+      id: user.id
+    }, "access_secret", {expiresIn: '30s'});
+
+    const refreshToken = sign({
+      id: user.id
+    }, "refresh_token", {expiresIn: '1w'});
+
+    res.cookie('access_token', accessToken, {
+      httpOnly: true,
+      maxAge: 24 * 60 * 60 * 1000
+    });
+
+    res.cookie('refresh_token', refreshToken, {
+      httpOnly: true,
+      maxAge: 7 * 24 * 60 * 60 * 1000
+    });
+
+    res.send({
+      message: 'success'
+    });
 
   } catch (error) {
     console.error("Kullanıcı girişi yapılırken hata:", error);
