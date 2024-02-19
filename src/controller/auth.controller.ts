@@ -6,9 +6,9 @@ import {sign, verify} from 'jsonwebtoken'
 
 export const Register = async (req: Request, res: Response) => {
     try {
-        const { first_name, last_name, email, password } = req.body;
+        const { first_name, last_name, email, password: plainPassword } = req.body;
     
-        const hashedPassword = await bcryptjs.hash(password, 12);
+        const hashedPassword = await bcryptjs.hash(plainPassword, 12);
     
         const newUser = new User({
           first_name,
@@ -19,8 +19,8 @@ export const Register = async (req: Request, res: Response) => {
     
         // Kullanıcıyı veritabanına kaydetme
         await newUser.save();
-        console.log(newUser);
-        res.status(201).json({ message: "Kullanıcı başarıyla oluşturuldu" });
+        const { password, ...data } = newUser.toObject(); 
+        res.status(201).send(data);
       } catch (error) {
         console.error("Kullanıcı oluşturulurken hata:", error);
         res.status(500).json({ error: "Sunucu hatası" });
@@ -107,4 +107,36 @@ export const AuthenticatedUser = async  (req: Request, res: Response) => {
       message: 'Unauthorized'
     });
   }
+}
+
+export const Refresh = async (req: Request, res: Response) => {
+  try {
+    const cookie = req.cookies['refresh_token'];
+    const payload: any = verify(cookie, process.env.REFRESH_SECRET || '');
+
+    if(!payload) {
+      return res.status(401).json({
+        message: 'Unauthorized'
+      });
+    }
+
+    const accessToken = sign({
+      id: payload.id
+    }, process.env.ACCESS_SECRET || '', {expiresIn: '30s'});
+
+    res.cookie('access_token', accessToken, {
+      httpOnly: true,
+      maxAge: 24 * 60 * 60 * 1000
+    });
+
+    res.send({
+      message: 'Success'
+    })
+
+  } catch (e) {
+    return res.status(401).json({
+      message: 'Unauthorized'
+    });
+  };
+  
 }
