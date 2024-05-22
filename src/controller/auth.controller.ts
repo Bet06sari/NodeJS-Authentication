@@ -1,151 +1,160 @@
 import { Request, Response } from "express";
 import bcryptjs from "bcryptjs";
 import { User } from "../entity/user.entity";
-import {sign, verify} from 'jsonwebtoken'
-
+import { sign, verify } from "jsonwebtoken";
 
 export const Register = async (req: Request, res: Response) => {
-    try {
-        const { first_name, last_name, email, password: plainPassword } = req.body;
-    
-        const hashedPassword = await bcryptjs.hash(plainPassword, 12);
-    
-        const newUser = new User({
-          first_name,
-          last_name,
-          email,
-          password: hashedPassword
-        });
-    
-        // Kullanıcıyı veritabanına kaydetme
-        await newUser.save();
-        const { password, ...data } = newUser.toObject(); 
-        res.status(201).send(data);
-      } catch (error) {
-        console.error("Kullanıcı oluşturulurken hata:", error);
-        res.status(500).json({ error: "Sunucu hatası" });
-      }
+  try {
+    const { first_name, last_name, email, password: plainPassword } = req.body;
+
+    const hashedPassword = await bcryptjs.hash(plainPassword, 12);
+
+    const newUser = new User({
+      first_name,
+      last_name,
+      email,
+      password: hashedPassword,
+    });
+
+    // Kullanıcıyı veritabanına kaydetme
+    await newUser.save();
+    const { password, ...data } = newUser.toObject();
+    res.status(201).send(data);
+  } catch (error) {
+    console.error("Kullanıcı oluşturulurken hata:", error);
+    res.status(500).json({ error: "Sunucu hatası" });
+  }
 };
 
-export const Login = async  (req: Request, res: Response) => {
+export const Login = async (req: Request, res: Response) => {
   try {
     const user = await User.findOne({ email: req.body.email });
 
     if (!user) {
-      return res.status(400).json({ 
-        message: "Kullanıcı bulunamadı" 
+      return res.status(400).json({
+        message: "Kullanıcı bulunamadı",
       });
     }
 
     if (!user.password) {
-      return res.status(400).json({ 
-        message: "Kullanıcı şifresi bulunamadı" 
+      return res.status(400).json({
+        message: "Kullanıcı şifresi bulunamadı",
       });
     }
 
-    const isPasswordValid = await bcryptjs.compare(req.body.password, user.password);
+    const isPasswordValid = await bcryptjs.compare(
+      req.body.password,
+      user.password
+    );
     if (!isPasswordValid) {
       return res.status(400).json({
-        message: "Şifre hatalı"
+        message: "Şifre hatalı",
       });
     }
 
-    const accessToken = sign({
-      id: user.id
-    }, process.env.ACCESS_SECRET || '', {expiresIn: '30s'});
+    const accessToken = sign(
+      {
+        id: user.id,
+      },
+      process.env.ACCESS_SECRET || "",
+      { expiresIn: "30s" }
+    );
 
-    const refreshToken = sign({
-      id: user.id
-    }, process.env.REFRESH_SECRET || '', {expiresIn: '1w'});
+    const refreshToken = sign(
+      {
+        id: user.id,
+      },
+      process.env.REFRESH_SECRET || "",
+      { expiresIn: "1w" }
+    );
 
-    res.cookie('access_token', accessToken, {
+    res.cookie("access_token", accessToken, {
       httpOnly: true,
-      maxAge: 24 * 60 * 60 * 1000
+      maxAge: 24 * 60 * 60 * 1000,
     });
 
-    res.cookie('refresh_token', refreshToken, {
+    res.cookie("refresh_token", refreshToken, {
       httpOnly: true,
-      maxAge: 7 * 24 * 60 * 60 * 1000
+      maxAge: 7 * 24 * 60 * 60 * 1000,
     });
 
     res.send({
-      message: 'success'
+      message: "success",
     });
-
   } catch (error) {
     console.error("Kullanıcı girişi yapılırken hata:", error);
     res.status(500).json({ error: "Sunucu hatası" });
   }
 };
 
-export const AuthenticatedUser = async  (req: Request, res: Response) => {
+export const AuthenticatedUser = async (req: Request, res: Response) => {
   try {
-    const cookie = req.cookies['access_token'];
-    const payload: any = verify(cookie, process.env.ACCESS_SECRET || '');
+    const cookie = req.cookies["access_token"];
+    const payload: any = verify(cookie, process.env.ACCESS_SECRET || "");
 
-    if(!payload) {
+    if (!payload) {
       return res.status(401).json({
-        message: 'Unauthorized'
+        message: "Unauthorized",
       });
     }
 
     const user = await User.findOne({ _id: payload.id });
     console.log(user);
 
-    if(!user) {
+    if (!user) {
       return res.status(401).json({
-        message: 'Unauthorized'
+        message: "Unauthorized",
       });
     }
 
-    const { password, ...data } = user.toObject();  //mongoose modelini js nesnesine dönüştürme
+    const { password, ...data } = user.toObject(); //mongoose modelini js nesnesine dönüştürme
     res.send(data);
-
-
-  } catch(e) {
+  } catch (e) {
     return res.status(401).json({
-      message: 'Unauthorized'
+      message: "Unauthorized",
     });
   }
-}
+};
 
 export const Refresh = async (req: Request, res: Response) => {
   try {
-    const cookie = req.cookies['refresh_token'];
-    const payload: any = verify(cookie, process.env.REFRESH_SECRET || '');
+    const cookie = req.cookies["refresh_token"];
+    const payload: any = verify(cookie, process.env.REFRESH_SECRET || "");
 
-    if(!payload) {
+    if (!payload) {
       return res.status(401).json({
-        message: 'Unauthorized'
+        message: "Unauthorized",
       });
     }
 
-    const accessToken = sign({
-      id: payload.id
-    }, process.env.ACCESS_SECRET || '', {expiresIn: '30s'});
+    const accessToken = sign(
+      {
+        id: payload.id,
+      },
+      process.env.ACCESS_SECRET || "",
+      { expiresIn: "30s" }
+    );
 
-    res.cookie('access_token', accessToken, {
+    res.cookie("access_token", accessToken, {
       httpOnly: true,
-      maxAge: 24 * 60 * 60 * 1000
+      maxAge: 24 * 60 * 60 * 1000,
     });
 
     res.send({
-      message: 'Success'
-    })
-
+      message: "Success",
+    });
   } catch (e) {
     return res.status(401).json({
-      message: 'Unauthorized'
+      message: "Unauthorized",
     });
-  };
-  
-}
+  }
+};
 
 export const Logout = async (req: Request, res: Response) => {
-  res.cookie('access_token', '', {maxAge: 0});
-  res.cookie('refresh_token', '', {maxAge: 0});
+  res.cookie("access_token", "", { maxAge: 0 });
+  res.cookie("refresh_token", "", { maxAge: 0 });
 
   res.send({
-    message: 'Success'
-  })
-}
+    message: "Success",
+  });
+};
